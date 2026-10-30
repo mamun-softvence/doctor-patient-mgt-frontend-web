@@ -40,6 +40,7 @@ Modals/Dialogs are required for **Add Doctor**, **Add Patient**, **Edit Patient*
 - Before editing: Review target directory ownership and define a minimal scoped plan.
 - Testing: **Playwright is the approved frontend testing framework for browser-level functionality and user workflows. Do not add Vitest, Jest, React Testing Library, or another frontend test runner without explicit approval.**
 - After editing: Run `tsc --noEmit`, `eslint`, `pnpm test` (Playwright), and `next build`. Never claim tests ran without verifying actual terminal execution.
+- Git commit recommendations: At the end of every verified task, inspect Git changes and proactively recommend path-specific, atomic, Conventional Commits using the `git-change-commit-manager` skill without automatically committing.
 - Maintain a consistent healthcare admin UI with clean, responsive layouts.
 
 <!-- BEGIN:nextjs-agent-rules -->

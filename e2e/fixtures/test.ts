@@ -4,17 +4,9 @@ export const test = base.extend<{
   resetStorage: void;
 }>({
   resetStorage: [
-    async ({ context, page }, use) => {
-      // Clear all cookies and storage before each test
+    async ({ context }, use) => {
+      // Clear all cookies before each test
       await context.clearCookies();
-      await page.addInitScript(() => {
-        try {
-          window.localStorage.clear();
-          window.sessionStorage.clear();
-        } catch {
-          // ignore in environments where storage might be restricted
-        }
-      });
       await use();
     },
     { auto: true },

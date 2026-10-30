@@ -8,8 +8,8 @@ export async function loginAsAdmin(page: Page): Promise<void> {
   const submitButton = page.getByRole('button', { name: /sign in|log in/i });
 
   if (await emailInput.count() > 0 && await submitButton.count() > 0) {
-    await emailInput.fill('admin@hospital.org');
-    await passwordInput.fill('Password123!');
+    await emailInput.fill('admin@doctortracker.dev');
+    await passwordInput.fill('ChangeMe123!');
     await submitButton.click();
   }
 }

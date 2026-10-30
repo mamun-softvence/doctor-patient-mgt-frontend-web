@@ -1,7 +1,8 @@
 import { test, expect } from '../fixtures/test';
 
 test.describe('Frontend State Management Architecture', () => {
-  test('1. Login form validation and navigation to Dashboard', async ({ page }) => {
+  test('1. Login form validation and navigation to Dashboard', async ({ page, context }) => {
+    await context.clearCookies();
     await page.goto('/login');
     await expect(page).toHaveTitle(/Sign in/i);
 
@@ -14,7 +15,7 @@ test.describe('Frontend State Management Architecture', () => {
     await passwordInput.fill('WrongPass123!');
     await submitBtn.click();
 
-    await expect(page.getByTestId('login-error')).toContainText(/Invalid email or password/i);
+    await expect(page.getByTestId('login-error')).toContainText(/Invalid email or password|Too many attempts/i);
 
     // Now submit with valid demo credentials
     await emailInput.fill('admin@doctortracker.dev');

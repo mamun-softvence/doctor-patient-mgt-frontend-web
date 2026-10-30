@@ -1,4 +1,5 @@
 import { Sidebar, Header } from '@/components/layout/Shell';
+import { Toast } from '@/components/layout/Toast';
 
 export default function PortalLayout({
   children,
@@ -14,6 +15,7 @@ export default function PortalLayout({
           {children}
         </main>
       </div>
+      <Toast />
     </div>
   );
 }

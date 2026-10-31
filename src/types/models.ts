@@ -42,6 +42,17 @@ export type HospitalInput = {
   name: string;
 };
 
+export type Specialization = {
+  id: string;
+  name: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type SpecializationInput = {
+  name: string;
+};
+
 export type Patient = {
   id: string;
   name: string;

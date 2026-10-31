@@ -48,5 +48,9 @@ export const keys = {
     all: ['hospitals'] as const,
     list: (q?: string) => ['hospitals', 'list', q] as const,
   },
+  specializations: {
+    all: ['specializations'] as const,
+    list: (q?: string) => ['specializations', 'list', q] as const,
+  },
 };
 

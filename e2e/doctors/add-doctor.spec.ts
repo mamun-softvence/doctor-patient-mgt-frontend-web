@@ -195,4 +195,30 @@ test.describe('Add Doctor Workflow (Visible Chromium Suite)', () => {
     await expect(listbox).not.toBeVisible();
     await expect(hospitalInput).toHaveValue(newHospitalName);
   });
+
+  test('6. Specialization combobox supports dynamic search and inline "+ Add new specialization"', async ({ page }) => {
+    await page.goto('/doctors/new');
+    const specInput = page.getByTestId('input-doctor-specialization');
+    await expect(specInput).toBeVisible();
+
+    // Type query to filter
+    await specInput.fill('Cardio');
+    const listbox = page.getByTestId('specialization-combobox-list');
+    await expect(listbox).toBeVisible();
+    await expect(listbox.getByText('Cardiology')).toBeVisible();
+
+    // Type a brand new specialization name
+    const newSpecName = `Pediatric Neuro-Oncology ${Date.now().toString().slice(-4)}`;
+    await specInput.fill(newSpecName);
+    const addNewOption = page.getByTestId('specialization-option-add-new');
+    await expect(addNewOption).toBeVisible();
+    await expect(addNewOption).toContainText(newSpecName);
+
+    // Click "+ Add"
+    await addNewOption.click();
+
+    // Combobox closes and input has the new specialization name
+    await expect(listbox).not.toBeVisible();
+    await expect(specInput).toHaveValue(newSpecName);
+  });
 });

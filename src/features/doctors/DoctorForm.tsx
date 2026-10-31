@@ -7,6 +7,7 @@ import { useCreateDoctor } from './hooks';
 import { useMockStore } from '@/lib/mock/store';
 import { useUIStore } from '@/lib/store/uiStore';
 import { HospitalCombobox } from '@/components/ui/HospitalCombobox';
+import { SpecializationCombobox } from '@/components/ui/SpecializationCombobox';
 
 interface DoctorFormProps {
   onSuccess?: () => void;
@@ -46,6 +47,7 @@ export function DoctorForm({
   });
 
   const hospitalValue = useWatch({ control, name: 'hospital' });
+  const specialtyValue = useWatch({ control, name: 'specialty' });
 
   const onSubmit = async (data: DoctorFormData) => {
     try {
@@ -102,24 +104,19 @@ export function DoctorForm({
             {errors.name && <p className="mt-1 text-xs text-rose-600">{errors.name.message}</p>}
           </div>
 
-          {/* Specialization */}
+          {/* Specialization (Combobox with live search & inline add) */}
           <div className="">
             <label htmlFor="d-spec" className="mb-1.5 block text-sm font-medium text-ink">
               Specialization <span className="text-rose-500">*</span>
             </label>
-            <div className="relative">
-              <input
-                id="d-spec"
-                type="text"
-                placeholder="Choose or type"
-                {...register('specialty')}
-                className={`block h-10 w-full rounded-lg border bg-white px-3 text-sm text-ink placeholder:text-muted/80 focus:outline-none focus:ring-4 ${
-                  errors.specialty
-                    ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/15'
-                    : 'border-line focus:border-brand-500 focus:ring-brand-500/15'
-                }`}
-              />
-            </div>
+            <SpecializationCombobox
+              id="d-spec"
+              value={specialtyValue}
+              onChange={(val) => {
+                setValue('specialty', val, { shouldValidate: true, shouldDirty: true });
+              }}
+              error={errors.specialty?.message}
+            />
             {errors.specialty ? (
               <p className="mt-1 text-xs text-rose-600">{errors.specialty.message}</p>
             ) : (

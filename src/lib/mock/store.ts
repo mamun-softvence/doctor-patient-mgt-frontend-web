@@ -1,15 +1,17 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { Doctor, Patient, Hospital, PatientStatus, DashboardStats, DoctorFormData, PatientFormData } from '@/types';
-import { INITIAL_DOCTORS, INITIAL_PATIENTS, INITIAL_HOSPITALS } from './seed';
+import { Doctor, Patient, Hospital, Specialization, PatientStatus, DashboardStats, DoctorFormData, PatientFormData } from '@/types';
+import { INITIAL_DOCTORS, INITIAL_PATIENTS, INITIAL_HOSPITALS, INITIAL_SPECIALIZATIONS } from './seed';
 
 interface MockStoreState {
   doctors: Doctor[];
   patients: Patient[];
   hospitals: Hospital[];
+  specializations: Specialization[];
 
   // Actions
   addHospital: (name: string) => Hospital;
+  addSpecialization: (name: string) => Specialization;
   addDoctor: (data: DoctorFormData) => Doctor;
   updateDoctor: (id: string, data: Partial<DoctorFormData>) => Doctor | null;
   addPatient: (data: PatientFormData) => Patient;
@@ -52,6 +54,7 @@ export const useMockStore = create<MockStoreState>()(
       doctors: INITIAL_DOCTORS,
       patients: INITIAL_PATIENTS,
       hospitals: INITIAL_HOSPITALS,
+      specializations: INITIAL_SPECIALIZATIONS,
 
       addHospital: (name: string) => {
         const trimmed = name.trim();
@@ -64,6 +67,19 @@ export const useMockStore = create<MockStoreState>()(
         };
         set((state) => ({ hospitals: [...state.hospitals, newHospital] }));
         return newHospital;
+      },
+
+      addSpecialization: (name: string) => {
+        const trimmed = name.trim();
+        const existing = get().specializations.find((s) => s.name.toLowerCase() === trimmed.toLowerCase());
+        if (existing) return existing;
+        const newSpecialization: Specialization = {
+          id: `spec-${Date.now()}`,
+          name: trimmed,
+          createdAt: new Date().toISOString(),
+        };
+        set((state) => ({ specializations: [...state.specializations, newSpecialization] }));
+        return newSpecialization;
       },
 
       addDoctor: (data: DoctorFormData) => {
@@ -243,6 +259,7 @@ export const useMockStore = create<MockStoreState>()(
           doctors: INITIAL_DOCTORS,
           patients: INITIAL_PATIENTS,
           hospitals: INITIAL_HOSPITALS,
+          specializations: INITIAL_SPECIALIZATIONS,
         });
       },
     }),

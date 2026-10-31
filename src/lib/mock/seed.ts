@@ -1,4 +1,35 @@
-import { Doctor, Patient, Hospital } from '@/types';
+import { Doctor, Patient, Hospital, Specialization } from '@/types';
+
+export const INITIAL_SPECIALIZATIONS: Specialization[] = [
+  { id: 'spec-1', name: 'Cardiology' },
+  { id: 'spec-2', name: 'Neurology' },
+  { id: 'spec-3', name: 'Pediatrics' },
+  { id: 'spec-4', name: 'Orthopedics' },
+  { id: 'spec-5', name: 'Dermatology' },
+  { id: 'spec-6', name: 'Oncology' },
+  { id: 'spec-7', name: 'General Medicine' },
+  { id: 'spec-8', name: 'Obstetrics & Gynecology' },
+  { id: 'spec-9', name: 'Gastroenterology' },
+  { id: 'spec-10', name: 'Ophthalmology' },
+  { id: 'spec-11', name: 'Pulmonology' },
+  { id: 'spec-12', name: 'Otolaryngology (ENT)' },
+  { id: 'spec-13', name: 'Nephrology' },
+  { id: 'spec-14', name: 'Anesthesiology' },
+  { id: 'spec-15', name: 'Endocrinology' },
+  { id: 'spec-16', name: 'Emergency Medicine' },
+  { id: 'spec-17', name: 'Hematology' },
+  { id: 'spec-18', name: 'Radiology' },
+  { id: 'spec-19', name: 'Pathology' },
+  { id: 'spec-20', name: 'Psychiatry' },
+  { id: 'spec-21', name: 'Infectious Diseases' },
+  { id: 'spec-22', name: 'Rheumatology' },
+  { id: 'spec-23', name: 'Physical Medicine & Rehabilitation' },
+  { id: 'spec-24', name: 'General Surgery' },
+  { id: 'spec-25', name: 'Preventive & Occupational Medicine' },
+  { id: 'spec-26', name: 'Medical Genetics' },
+  { id: 'spec-27', name: 'Urology' },
+  { id: 'spec-28', name: 'Dentistry' },
+];
 
 export const INITIAL_HOSPITALS: Hospital[] = [
   { id: 'hosp-1', name: 'Square Hospital' },

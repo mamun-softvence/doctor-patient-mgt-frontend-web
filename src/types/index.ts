@@ -6,6 +6,16 @@ export interface Hospital {
   createdAt?: string;
 }
 
+export interface Specialization {
+  id: string;
+  name: string;
+  createdAt?: string;
+}
+
+export interface SpecializationInput {
+  name: string;
+}
+
 export interface Doctor {
   id: string;
   name: string;

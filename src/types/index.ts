@@ -9,6 +9,7 @@ export interface Doctor {
   phone: string;
   status: DoctorStatus;
   patientCount?: number;
+  createdAt?: string;
 }
 
 export type PatientGender = 'male' | 'female' | 'other';
@@ -27,6 +28,7 @@ export interface Patient {
   phone?: string;
   address?: string;
   emergencyContact?: string;
+  createdAt?: string;
 }
 
 export interface DashboardStats {
@@ -55,6 +57,8 @@ export interface DoctorFilterParams {
   search?: string;
   specialty?: string;
   department?: string;
+  from?: string;
+  to?: string;
   page?: number;
   limit?: number;
 }
@@ -64,6 +68,8 @@ export interface PatientFilterParams {
   status?: string;
   doctorId?: string;
   condition?: string;
+  from?: string;
+  to?: string;
   page?: number;
   limit?: number;
 }

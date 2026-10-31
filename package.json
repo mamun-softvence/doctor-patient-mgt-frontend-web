@@ -9,6 +9,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "playwright test",
+    "test:add-doctor": "playwright test e2e/doctors/add-doctor.spec.ts --project=chromium --headed",
+    "test:add-doctor:headless": "playwright test e2e/doctors/add-doctor.spec.ts --project=chromium",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",

@@ -17,6 +17,9 @@ start: ## Start Next.js production server
 test: ## Run Playwright test suite
 	pnpm test
 
+test-add-doctor-headed: ## Run Add Doctor test with visible Chromium browser
+	pnpm test:add-doctor
+
 typecheck: ## Check TypeScript types
 	pnpm typecheck
 

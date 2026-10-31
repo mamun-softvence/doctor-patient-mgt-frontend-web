@@ -60,6 +60,7 @@ export const useMockStore = create<MockStoreState>()(
           email: data.email,
           phone: data.phone,
           status: data.status,
+          createdAt: new Date().toISOString(),
         };
 
         set((state) => ({
@@ -112,6 +113,7 @@ export const useMockStore = create<MockStoreState>()(
           phone: data.phone,
           address: data.address,
           emergencyContact: data.emergencyContact,
+          createdAt: new Date().toISOString(),
         };
 
         set((state) => ({

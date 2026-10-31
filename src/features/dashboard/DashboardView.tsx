@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import {
   AreaChart,
@@ -15,10 +15,12 @@ import { useMockStore, computeDashboardStats } from '@/lib/mock/store';
 import { useDashboardSummary, useBreakdown, useAdmissions, useTopDoctors } from './hooks';
 
 export function DashboardView() {
+  const [trendRange, setTrendRange] = useState<'7d' | '30d' | '90d'>('30d');
+
   // TanStack Query API hooks
-  useDashboardSummary({ range: '30d' });
+  useDashboardSummary({ range: trendRange });
   const { data: breakdownData } = useBreakdown();
-  const { data: admissionsData } = useAdmissions({ range: '30d' });
+  const { data: admissionsData } = useAdmissions({ range: trendRange });
   const { data: topDoctorsData } = useTopDoctors(5);
 
   // Authoritative fallback mock store
@@ -48,12 +50,13 @@ export function DashboardView() {
         previous: previousAdmissions?.[idx]?.count ?? 0,
       }));
     }
-    return trend.map((item) => ({
+    const sliceCount = trendRange === '7d' ? 7 : trendRange === '30d' ? 30 : 90;
+    return trend.slice(-sliceCount).map((item) => ({
       date: item.date.slice(5),
       admissions: item.count,
       previous: Math.max(0, item.count - 1),
     }));
-  }, [currentAdmissions, previousAdmissions, trend]);
+  }, [currentAdmissions, previousAdmissions, trend, trendRange]);
 
   return (
     <div className="space-y-6">
@@ -138,19 +141,42 @@ export function DashboardView() {
 
       {/* Admissions Trend Chart */}
       <div className="rounded-2xl border border-line bg-white p-6 shadow-[0_1px_2px_rgba(16,24,22,0.04)]">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h2 className="text-base font-semibold text-ink">Admissions Trend</h2>
-            <p className="mt-0.5 text-xs text-muted">Daily patient intake across the last 30 days.</p>
+            <p className="mt-0.5 text-xs text-muted">
+              Daily patient intake across the selected period ({trendRange.toUpperCase()}).
+            </p>
           </div>
-          <div className="flex items-center gap-4 text-xs">
-            <div className="flex items-center gap-1.5">
-              <span className="size-2.5 rounded-full bg-brand-600" />
-              <span className="text-muted">Current Period</span>
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Range Toggle Pills */}
+            <div className="flex items-center gap-1 rounded-lg border border-line bg-canvas/60 p-0.5">
+              {(['7d', '30d', '90d'] as const).map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setTrendRange(r)}
+                  data-testid={`btn-trend-range-${r}`}
+                  className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${
+                    trendRange === r
+                      ? 'bg-white text-ink shadow-sm'
+                      : 'text-muted hover:text-ink'
+                  }`}
+                >
+                  {r.toUpperCase()}
+                </button>
+              ))}
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="size-2.5 rounded-full bg-line" />
-              <span className="text-muted">Previous Period</span>
+
+            <div className="flex items-center gap-3 text-xs">
+              <div className="flex items-center gap-1.5">
+                <span className="size-2.5 rounded-full bg-brand-600" />
+                <span className="text-muted">Current</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="size-2.5 rounded-full bg-line" />
+                <span className="text-muted">Previous</span>
+              </div>
             </div>
           </div>
         </div>

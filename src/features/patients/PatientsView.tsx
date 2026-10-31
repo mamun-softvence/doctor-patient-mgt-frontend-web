@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useMockStore } from '@/lib/mock/store';
-import { parsePatientFilters, buildQueryString } from '@/lib/url/filters';
+import { parsePatientFilters, buildQueryString, getDatePresetRange } from '@/lib/url/filters';
 import { AddPatientModal } from '@/components/modals/AddPatientModal';
 import { EditPatientModal } from '@/components/modals/EditPatientModal';
 import { DeletePatientModal } from '@/components/modals/DeletePatientModal';
@@ -22,9 +22,40 @@ export function PatientsView() {
   // Read URL filters
   const filters = parsePatientFilters(searchParams);
 
+  // Active date preset state
+  const [datePreset, setDatePreset] = useState<string>(() => {
+    if (filters.from || filters.to) return 'custom';
+    return 'all';
+  });
+  const [fromDate, setFromDate] = useState(filters.from);
+  const [toDate, setToDate] = useState(filters.to);
+
   // Authoritative data from store
   const allPatients = useMockStore((state) => state.patients);
   const allDoctors = useMockStore((state) => state.doctors);
+
+  // URL update helper
+  const updateUrl = (updates: Record<string, string | number | null | undefined>) => {
+    startTransition(() => {
+      const current = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : searchParams;
+      const newQuery = buildQueryString(current, updates);
+      router.replace(`/patients${newQuery}`);
+    });
+  };
+
+  const handleDatePresetChange = (preset: string) => {
+    setDatePreset(preset);
+    if (preset === 'all') {
+      setFromDate('');
+      setToDate('');
+      updateUrl({ from: '', to: '' });
+    } else if (preset === '7d' || preset === '30d') {
+      const range = getDatePresetRange(preset);
+      setFromDate(range.from);
+      setToDate(range.to);
+      updateUrl({ from: range.from, to: range.to });
+    }
+  };
 
   // Filter patients based on URL search params
   const filteredPatients = allPatients.filter((pat) => {
@@ -44,6 +75,20 @@ export function PatientsView() {
     if (filters.condition && !pat.condition.toLowerCase().includes(filters.condition.toLowerCase())) {
       return false;
     }
+
+    // Dual Match date filtering: matches either admissionDate OR createdAt within range
+    const admittedDate = pat.admitted ? pat.admitted.split('T')[0] : '';
+    const createdDate = pat.createdAt ? pat.createdAt.split('T')[0] : '';
+
+    if (filters.from) {
+      const matchFrom = (admittedDate && admittedDate >= filters.from) || (createdDate && createdDate >= filters.from);
+      if (!matchFrom) return false;
+    }
+    if (filters.to) {
+      const matchTo = (admittedDate && admittedDate <= filters.to) || (createdDate && createdDate <= filters.to);
+      if (!matchTo) return false;
+    }
+
     return true;
   });
 
@@ -54,13 +99,9 @@ export function PatientsView() {
   const startIndex = (currentPage - 1) * filters.limit;
   const paginatedPatients = filteredPatients.slice(startIndex, startIndex + filters.limit);
 
-  // URL update helper
-  const updateUrl = (updates: Record<string, string | number | null | undefined>) => {
-    startTransition(() => {
-      const newQuery = buildQueryString(searchParams, updates);
-      router.replace(`/patients${newQuery}`);
-    });
-  };
+  const hasActiveFilters = Boolean(
+    filters.search || filters.status || filters.doctorId || filters.condition || filters.from || filters.to
+  );
 
   return (
     <div className="space-y-6">
@@ -85,15 +126,15 @@ export function PatientsView() {
       </div>
 
       {/* Filter / Search Bar */}
-      <div className="rounded-2xl border border-line bg-white p-4 shadow-[0_1px_2px_rgba(16,24,22,0.04)]">
-        <div className="flex flex-col sm:flex-row gap-3">
+      <div className="rounded-2xl border border-line bg-white p-4 shadow-[0_1px_2px_rgba(16,24,22,0.04)] space-y-3">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-3">
           <input
             type="text"
             value={filters.search}
             onChange={(e) => updateUrl({ search: e.target.value })}
             placeholder="Search by patient name, condition, or doctor..."
             data-testid="patient-search-input"
-            className="block h-9 flex-1 rounded-lg border border-line bg-white px-3 text-sm text-ink placeholder:text-muted/80 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+            className="block h-9 min-w-[220px] flex-1 rounded-lg border border-line bg-white px-3 text-sm text-ink placeholder:text-muted/80 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
           />
           <select
             value={filters.status}
@@ -119,16 +160,66 @@ export function PatientsView() {
               </option>
             ))}
           </select>
-          {(filters.search || filters.status || filters.doctorId) && (
+
+          {/* Date Filter Dropdown */}
+          <select
+            value={datePreset}
+            onChange={(e) => handleDatePresetChange(e.target.value)}
+            data-testid="patient-date-preset-select"
+            className="h-9 rounded-lg border border-line bg-white px-3 text-sm text-ink focus:border-brand-500 focus:outline-none"
+          >
+            <option value="all">All Dates</option>
+            <option value="7d">Last 7 Days</option>
+            <option value="30d">Last 30 Days</option>
+            <option value="custom">Custom Range...</option>
+          </select>
+
+          {hasActiveFilters && (
             <button
               type="button"
-              onClick={() => updateUrl({ search: '', status: '', doctorId: '' })}
-              className="h-9 px-3 text-xs font-medium text-muted hover:text-ink border border-line rounded-lg hover:bg-canvas"
+              onClick={() => {
+                setDatePreset('all');
+                setFromDate('');
+                setToDate('');
+                updateUrl({ search: '', status: '', doctorId: '', condition: '', from: '', to: '' });
+              }}
+              data-testid="patient-reset-filters"
+              className="h-9 px-3 text-xs font-medium text-muted hover:text-ink border border-line rounded-lg hover:bg-canvas transition-colors"
             >
               Reset Filters
             </button>
           )}
         </div>
+
+        {/* Custom Date Range Row */}
+        {(datePreset === 'custom' || filters.from || filters.to) && (
+          <div className="flex items-center gap-2 pt-2 border-t border-line/60 text-xs text-muted" data-testid="patient-custom-date-row">
+            <span className="font-medium text-ink">From:</span>
+            <input
+              type="date"
+              value={fromDate}
+              onChange={(e) => {
+                const val = e.target.value;
+                setFromDate(val);
+                updateUrl({ from: val, to: toDate });
+              }}
+              data-testid="patient-date-from"
+              className="h-8 rounded-md border border-line bg-white px-2 text-xs text-ink focus:border-brand-500 focus:outline-none"
+            />
+            <span className="font-medium text-ink">To:</span>
+            <input
+              type="date"
+              value={toDate}
+              onChange={(e) => {
+                const val = e.target.value;
+                setToDate(val);
+                updateUrl({ from: fromDate, to: val });
+              }}
+              data-testid="patient-date-to"
+              className="h-8 rounded-md border border-line bg-white px-2 text-xs text-ink focus:border-brand-500 focus:outline-none"
+            />
+          </div>
+        )}
       </div>
 
       {/* Patients Table */}
@@ -250,4 +341,3 @@ export function PatientsView() {
     </div>
   );
 }
-

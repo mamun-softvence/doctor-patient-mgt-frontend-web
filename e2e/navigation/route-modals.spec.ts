@@ -192,4 +192,83 @@ test.describe('Next.js Parallel & Intercepting Route Modals (Rule 8)', () => {
       await expect(page.getByRole('link', { name: 'Return to Patients' })).toBeVisible();
     });
   });
+
+  test.describe('Workflow 4: Edit Doctor (/doctors/[doctorId]/edit)', () => {
+    test('Soft navigation from doctor detail view intercepts into right-side drawer (@modal)', async ({ page }) => {
+      await page.goto('/doctors/doc-1');
+      await expect(page.getByTestId('doctor-name-heading')).toContainText('Dr. Sarah Jenkins');
+
+      // Click Edit doctor button
+      await page.getByTestId('btn-edit-doctor').click();
+      await expect(page).toHaveURL(/\/doctors\/doc-1\/edit$/);
+
+      // Drawer dialog appears on the right
+      const drawer = page.getByTestId('edit-doctor-drawer');
+      await expect(drawer).toBeVisible();
+      await expect(drawer.getByRole('heading', { name: 'Edit doctor' })).toBeVisible();
+
+      // Background doctor profile remains visible behind drawer
+      await expect(page.getByTestId('doctor-name-heading')).toBeVisible();
+
+      // Browser back closes drawer
+      await page.goBack();
+      await expect(drawer).not.toBeVisible();
+      await expect(page).toHaveURL(/\/doctors\/doc-1$/);
+
+      // Browser forward re-opens drawer
+      await page.goForward();
+      await expect(drawer).toBeVisible();
+      await expect(page).toHaveURL(/\/doctors\/doc-1\/edit$/);
+
+      // Close via close button
+      await drawer.getByRole('button', { name: 'Close dialog' }).click();
+      await expect(drawer).not.toBeVisible();
+    });
+
+    test('Editing doctor in drawer updates doctor details and reflects across UI', async ({ page }) => {
+      await page.goto('/doctors/doc-2');
+      await expect(page.getByTestId('doctor-name-heading')).toContainText('Dr. Michael Chen');
+
+      // Open drawer
+      await page.getByTestId('btn-edit-doctor').click();
+      const drawer = page.getByTestId('edit-doctor-drawer');
+      await expect(drawer).toBeVisible();
+
+      // Verify initial value
+      const nameInput = drawer.locator('#d-name');
+      await expect(nameInput).toHaveValue('Dr. Michael Chen');
+
+      // Change name and submit
+      await nameInput.fill('Dr. Michael Chen Updated');
+      await drawer.getByTestId('btn-submit-doctor').click();
+
+      // Drawer closes, header updates, and toast appears
+      await expect(drawer).not.toBeVisible();
+      await expect(page.getByTestId('doctor-name-heading')).toContainText('Dr. Michael Chen Updated');
+      await expect(page.getByText(/Doctor Dr. Michael Chen Updated updated successfully/i)).toBeVisible();
+    });
+
+    test('Direct URL visit and reload render standalone canonical edit page', async ({ page }) => {
+      await page.goto('/doctors/doc-1/edit');
+      await expect(page.getByRole('heading', { name: 'Edit Doctor Profile' })).toBeVisible();
+      await expect(page.getByRole('link', { name: /Back to Doctor Profile/i })).toBeVisible();
+
+      // Form is populated with doctor data
+      await expect(page.locator('#d-name')).toHaveValue(/Dr. Sarah Jenkins/);
+
+      // Reload preserves canonical page
+      await page.reload();
+      await expect(page.getByRole('heading', { name: 'Edit Doctor Profile' })).toBeVisible();
+
+      // Cancel returns to doctor detail profile
+      await page.getByRole('button', { name: 'Cancel' }).click();
+      await expect(page).toHaveURL(/\/doctors\/doc-1$/);
+    });
+
+    test('Invalid doctor ID renders graceful not-found recovery', async ({ page }) => {
+      await page.goto('/doctors/non-existent-doc-999/edit');
+      await expect(page.getByRole('heading', { name: 'Doctor Not Found' })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Return to Doctors' })).toBeVisible();
+    });
+  });
 });

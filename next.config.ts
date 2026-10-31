@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "node:path";
 
 const nextConfig: NextConfig = {
   deprecated: {
@@ -15,7 +16,7 @@ const nextConfig: NextConfig = {
     ];
   },
   async rewrites() {
-    const apiUrl = process.env.API_URL || 'http://localhost:5000';
+    const apiUrl = process.env.API_URL || 'http://localhost:5001';
     return [
       {
         source: '/api/v1/:path*',
@@ -26,6 +27,7 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {
+    root: path.resolve(__dirname, '..'),
     rules: {
       "*.css": {
         loaders: ["@tailwindcss/turbopack"],

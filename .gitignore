@@ -52,7 +52,9 @@ next-env.d.ts
 .vercel
 
 .agents/
+AGENTS.md
 GEMINI.md
+SKILL.md
 NEXTJS_GEMINI_3_8_FLASH_GUIDE.md
 PROMPTS.md
 docs/

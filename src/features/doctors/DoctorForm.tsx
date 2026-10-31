@@ -3,13 +3,17 @@
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { doctorFormSchema, DoctorFormData } from '@/lib/validation/schemas';
-import { useCreateDoctor } from './hooks';
+import { useCreateDoctor, useUpdateDoctor } from './hooks';
 import { useMockStore } from '@/lib/mock/store';
 import { useUIStore } from '@/lib/store/uiStore';
 import { HospitalCombobox } from '@/components/ui/HospitalCombobox';
 import { SpecializationCombobox } from '@/components/ui/SpecializationCombobox';
 
 interface DoctorFormProps {
+  doctorId?: string;
+  mode?: 'create' | 'edit';
+  layout?: 'dialog' | 'drawer';
+  version?: number;
   onSuccess?: () => void;
   onCancel?: () => void;
   initialValues?: Partial<DoctorFormData>;
@@ -17,14 +21,21 @@ interface DoctorFormProps {
 }
 
 export function DoctorForm({
+  doctorId,
+  mode = 'create',
+  layout = 'dialog',
+  version,
   onSuccess,
   onCancel,
   initialValues,
-  submitLabel = 'Add doctor',
+  submitLabel = mode === 'edit' ? 'Save changes' : 'Add doctor',
 }: DoctorFormProps) {
   const addDoctor = useMockStore((state) => state.addDoctor);
+  const updateDoctor = useMockStore((state) => state.updateDoctor);
   const showToast = useUIStore((state) => state.showToast);
   const createDoctorMutation = useCreateDoctor();
+  const updateDoctorMutation = useUpdateDoctor();
+  const isPending = createDoctorMutation.isPending || updateDoctorMutation.isPending;
 
   const {
     register,
@@ -53,6 +64,36 @@ export function DoctorForm({
     try {
       const hospitalName = data.hospital.trim();
 
+      if (mode === 'edit' && doctorId) {
+        await updateDoctorMutation
+          .mutateAsync({
+            id: doctorId,
+            version: version ?? 1,
+            changes: {
+              name: data.name,
+              specialization: data.specialty,
+              hospital: hospitalName,
+              phone: data.phone,
+              email: data.email,
+            },
+          })
+          .catch(() => {
+            // Fallback for mock mode if API offline
+          });
+
+        const updated = updateDoctor(doctorId, {
+          ...data,
+          hospital: hospitalName,
+          department: data.department || hospitalName,
+        });
+
+        if (updated) {
+          showToast(`Doctor ${updated.name} updated successfully.`);
+        }
+        onSuccess?.();
+        return;
+      }
+
       await createDoctorMutation
         .mutateAsync({
           name: data.name,
@@ -79,12 +120,17 @@ export function DoctorForm({
     }
   };
 
+  const isDrawer = layout === 'drawer';
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-0">
-      <div className="px-6 pb-6 pt-5">
-        <div className="grid gap-4 sm:grid-cols-2">
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      className={isDrawer ? 'flex flex-1 flex-col justify-between overflow-hidden' : 'space-y-0'}
+    >
+      <div className={isDrawer ? 'flex-1 space-y-4 overflow-y-auto px-6 py-5' : 'px-6 pb-6 pt-5'}>
+        <div className={isDrawer ? 'space-y-4' : 'grid gap-4 sm:grid-cols-2'}>
           {/* Full Name */}
-          <div className="sm:col-span-2">
+          <div className={isDrawer ? '' : 'sm:col-span-2'}>
             <label htmlFor="d-name" className="mb-1.5 block text-sm font-medium text-ink">
               Full name <span className="text-rose-500">*</span>
             </label>
@@ -184,27 +230,60 @@ export function DoctorForm({
             </div>
             {errors.email && <p className="mt-1 text-xs text-rose-600">{errors.email.message}</p>}
           </div>
+
+          {/* Doctor Status */}
+          <div className={isDrawer ? '' : 'sm:col-span-2'}>
+            <label htmlFor="d-status" className="mb-1.5 block text-sm font-medium text-ink">
+              Status <span className="text-rose-500">*</span>
+            </label>
+            <div className="relative">
+              <select
+                id="d-status"
+                {...register('status')}
+                className="block h-10 w-full appearance-none rounded-lg border border-line bg-white px-3 text-sm text-ink focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+              >
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-muted">
+                <svg className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
+              </span>
+            </div>
+            {errors.status && <p className="mt-1 text-xs text-rose-600">{errors.status.message}</p>}
+          </div>
         </div>
       </div>
 
       {/* Footer Actions */}
-      <div className="flex flex-col-reverse gap-2 border-t border-line bg-canvas/60 px-6 py-4 sm:flex-row sm:justify-end">
+      <div
+        className={
+          isDrawer
+            ? 'flex gap-2 border-t border-line bg-canvas/60 px-6 py-4'
+            : 'flex flex-col-reverse gap-2 border-t border-line bg-canvas/60 px-6 py-4 sm:flex-row sm:justify-end'
+        }
+      >
         {onCancel && (
           <button
             type="button"
             onClick={onCancel}
-            className="inline-flex h-10 px-4 items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm transition-colors border border-line bg-white font-medium text-ink hover:bg-canvas cursor-pointer"
+            className={`inline-flex h-10 px-4 items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm transition-colors border border-line bg-white font-medium text-ink hover:bg-canvas cursor-pointer ${
+              isDrawer ? 'flex-1' : ''
+            }`}
           >
             Cancel
           </button>
         )}
         <button
           type="submit"
-          disabled={isSubmitting || createDoctorMutation.isPending}
+          disabled={isSubmitting || isPending}
           data-testid="btn-submit-doctor"
-          className="inline-flex h-10 px-4 items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm transition-colors bg-brand-600 font-semibold text-white hover:bg-brand-700 disabled:opacity-50 cursor-pointer"
+          className={`inline-flex h-10 px-4 items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm transition-colors bg-brand-600 font-semibold text-white hover:bg-brand-700 disabled:opacity-50 cursor-pointer ${
+            isDrawer ? 'flex-1' : ''
+          }`}
         >
-          {isSubmitting || createDoctorMutation.isPending ? 'Saving...' : submitLabel}
+          {isSubmitting || isPending ? 'Saving...' : submitLabel}
         </button>
       </div>
     </form>

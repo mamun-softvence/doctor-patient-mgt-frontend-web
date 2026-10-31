@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { useCurrentUser } from '@/features/auth/hooks';
 import { useMockStore, classifyPatientCondition } from '@/lib/mock/store';
 import { parsePatientFilters, buildQueryString, getDatePresetRange } from '@/lib/url/filters';
 import { EditPatientModal } from '@/components/modals/EditPatientModal';
@@ -97,6 +98,8 @@ export function PatientsView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [, startTransition] = useTransition();
+  const { data: me } = useCurrentUser();
+  const isAdmin = me?.role === 'admin';
 
   const [sortBy, setSortBy] = useState('newest');
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
@@ -648,15 +651,17 @@ export function PatientsView() {
                     </svg>
                   </span>
                 </th>
-                <th scope="col" className="w-24">
-                  <span className="sr-only">Actions</span>
-                </th>
+                {isAdmin && (
+                  <th scope="col" className="w-24">
+                    <span className="sr-only">Actions</span>
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-line" data-testid="patients-table-body">
               {paginatedPatients.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-muted">
+                  <td colSpan={isAdmin ? 6 : 5} className="px-6 py-8 text-center text-muted">
                     No patients found matching the search criteria.
                   </td>
                 </tr>
@@ -680,37 +685,39 @@ export function PatientsView() {
                     <td className="whitespace-nowrap px-3 py-3 text-muted hidden md:table-cell">
                       {formatDate(pat.admitted || pat.admissionDate)}
                     </td>
-                    <td className="py-2 pl-3 pr-3">
-                      <div className="flex justify-end gap-0.5">
-                        <Link
-                          href={`/patients/${pat.id}/edit`}
-                          role="button"
-                          aria-label={`Edit ${pat.name}`}
-                          data-testid={`btn-edit-patient-${pat.id}`}
-                          className="inline-grid size-9 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-canvas hover:text-ink cursor-pointer"
-                        >
-                          <svg className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                            <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                            <path d="m15 5 4 4" />
-                          </svg>
-                        </Link>
-                        <button
-                          type="button"
-                          onClick={() => setDeletingPatient(pat)}
-                          aria-label={`Delete ${pat.name}`}
-                          data-testid={`btn-delete-patient-${pat.id}`}
-                          className="inline-grid size-9 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-canvas hover:text-ink hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
-                        >
-                          <svg className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                            <path d="M3 6h18" />
-                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                            <path d="M10 11v6" />
-                            <path d="M14 11v6" />
-                          </svg>
-                        </button>
-                      </div>
-                    </td>
+                    {isAdmin && (
+                      <td className="py-2 pl-3 pr-3">
+                        <div className="flex justify-end gap-0.5">
+                          <Link
+                            href={`/patients/${pat.id}/edit`}
+                            role="button"
+                            aria-label={`Edit ${pat.name}`}
+                            data-testid={`btn-edit-patient-${pat.id}`}
+                            className="inline-grid size-9 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-canvas hover:text-ink cursor-pointer"
+                          >
+                            <svg className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                              <path d="m15 5 4 4" />
+                            </svg>
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => setDeletingPatient(pat)}
+                            aria-label={`Delete ${pat.name}`}
+                            data-testid={`btn-delete-patient-${pat.id}`}
+                            className="inline-grid size-9 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-canvas hover:text-ink hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
+                          >
+                            <svg className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              <path d="M3 6h18" />
+                              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                              <path d="M10 11v6" />
+                              <path d="M14 11v6" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))
               )}

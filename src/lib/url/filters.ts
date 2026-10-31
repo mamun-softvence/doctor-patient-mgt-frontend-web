@@ -3,7 +3,8 @@ import { DoctorFilterParams, PatientFilterParams } from '@/types';
 export function parseDoctorFilters(searchParams: URLSearchParams): Required<DoctorFilterParams> {
   const search = searchParams.get('search') ?? '';
   const specialty = searchParams.get('specialty') ?? '';
-  const department = searchParams.get('department') ?? '';
+  const hospital = searchParams.get('hospital') ?? searchParams.get('department') ?? '';
+  const department = searchParams.get('department') ?? hospital;
   const from = searchParams.get('from') ?? '';
   const to = searchParams.get('to') ?? '';
   const parsedPage = parseInt(searchParams.get('page') ?? '1', 10);
@@ -12,6 +13,7 @@ export function parseDoctorFilters(searchParams: URLSearchParams): Required<Doct
   return {
     search: search.trim(),
     specialty: specialty.trim(),
+    hospital: hospital.trim(),
     department: department.trim(),
     from: from.trim(),
     to: to.trim(),
@@ -72,7 +74,7 @@ export function buildQueryString(
   }
 
   // If a filter or search term changed and page wasn't explicitly updated in updates, reset page to 1
-  const filterKeys = ['search', 'specialty', 'department', 'status', 'doctorId', 'condition', 'from', 'to'];
+  const filterKeys = ['search', 'specialty', 'hospital', 'department', 'status', 'doctorId', 'condition', 'from', 'to'];
   const hasFilterUpdate = Object.keys(updates).some((k) => filterKeys.includes(k));
   if (hasFilterUpdate && !('page' in updates)) {
     params.delete('page'); // page 1 is default

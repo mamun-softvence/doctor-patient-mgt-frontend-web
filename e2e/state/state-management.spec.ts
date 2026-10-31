@@ -185,4 +185,56 @@ test.describe('Frontend State Management Architecture', () => {
     await expect(page).toHaveURL(/.*status=Recovered/);
     await expect(page.getByTestId('patient-status-select')).toHaveValue('Recovered');
   });
+
+  test('7. Date-wise filtering on Doctors, Patients, and Dashboard trend toggle', async ({ page }) => {
+    // 1. Dashboard Admissions Trend range toggle pills
+    await page.goto('/dashboard');
+    const pill7d = page.getByTestId('btn-trend-range-7d');
+    const pill30d = page.getByTestId('btn-trend-range-30d');
+    const pill90d = page.getByTestId('btn-trend-range-90d');
+
+    await expect(pill30d).toBeVisible();
+    await pill7d.click();
+    await expect(page.getByText(/across the selected period \(7D\)/i)).toBeVisible();
+
+    await pill90d.click();
+    await expect(page.getByText(/across the selected period \(90D\)/i)).toBeVisible();
+
+    // 2. Doctors directory date-wise filtering
+    await page.goto('/doctors');
+    const docPresetSelect = page.getByTestId('doctor-date-preset-select');
+    await expect(docPresetSelect).toBeVisible();
+
+    // Select custom range
+    await docPresetSelect.selectOption('custom');
+    await expect(page.getByTestId('doctor-custom-date-row')).toBeVisible();
+
+    const docFromInput = page.getByTestId('doctor-date-from');
+    const docToInput = page.getByTestId('doctor-date-to');
+    await docFromInput.fill('2024-01-01');
+    await docToInput.fill('2024-12-31');
+    await expect(page).toHaveURL(/.*from=2024-01-01.*to=2024-12-31/);
+
+    // Reset filters
+    await page.getByTestId('doctor-reset-filters').click();
+    await expect(page).toHaveURL(/\/doctors$/);
+
+    // 3. Patients roster date-wise filtering
+    await page.goto('/patients');
+    const patPresetSelect = page.getByTestId('patient-date-preset-select');
+    await expect(patPresetSelect).toBeVisible();
+
+    await patPresetSelect.selectOption('custom');
+    await expect(page.getByTestId('patient-custom-date-row')).toBeVisible();
+
+    const patFromInput = page.getByTestId('patient-date-from');
+    const patToInput = page.getByTestId('patient-date-to');
+    await patFromInput.fill('2024-01-01');
+    await patToInput.fill('2024-01-31');
+    await expect(page).toHaveURL(/.*from=2024-01-01.*to=2024-01-31/);
+
+    // Verify reset
+    await page.getByTestId('patient-reset-filters').click();
+    await expect(page).toHaveURL(/\/patients$/);
+  });
 });

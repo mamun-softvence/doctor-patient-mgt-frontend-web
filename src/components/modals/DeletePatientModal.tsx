@@ -1,5 +1,6 @@
 'use client';
 
+import { createPortal } from 'react-dom';
 import { useMockStore } from '@/lib/mock/store';
 import { useUIStore } from '@/lib/store/uiStore';
 import { Patient } from '@/types';
@@ -14,7 +15,7 @@ export function DeletePatientModal({ isOpen, onClose, patient }: DeletePatientMo
   const deletePatient = useMockStore((state) => state.deletePatient);
   const showToast = useUIStore((state) => state.showToast);
 
-  if (!isOpen || !patient) return null;
+  if (!isOpen || !patient || typeof document === 'undefined') return null;
 
   const handleDelete = () => {
     const success = deletePatient(patient.id);
@@ -24,7 +25,7 @@ export function DeletePatientModal({ isOpen, onClose, patient }: DeletePatientMo
     onClose();
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs">
       <div
         role="alertdialog"
@@ -81,7 +82,8 @@ export function DeletePatientModal({ isOpen, onClose, patient }: DeletePatientMo
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

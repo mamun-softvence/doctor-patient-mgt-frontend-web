@@ -69,7 +69,7 @@ test.describe('Next.js Parallel & Intercepting Route Modals (Rule 8)', () => {
 
       // Click assign patient
       await page.getByTestId('btn-assign-patient').click();
-      await expect(page.getByRole('dialog', { name: 'Add Patient' })).toBeVisible();
+      await expect(page.getByRole('dialog', { name: /Add Patient/i })).toBeVisible();
       await expect(page).toHaveURL(/\/doctors\/doc-1\/patients\/new$/);
 
       // Doctor header background is still visible behind modal
@@ -83,17 +83,67 @@ test.describe('Next.js Parallel & Intercepting Route Modals (Rule 8)', () => {
 
     test('Direct visit to doctor add patient renders standalone canonical page', async ({ page }) => {
       await page.goto('/doctors/doc-1/patients/new');
-      await expect(page.getByRole('heading', { name: 'Register Patient' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: /Add Patient/i })).toBeVisible();
       await expect(page.getByRole('link', { name: /Back to Doctor Profile/i })).toBeVisible();
 
       // Refresh renders standalone page
       await page.reload();
-      await expect(page.getByRole('heading', { name: 'Register Patient' })).toBeVisible();
-      await expect(page.getByRole('button', { name: 'Register Patient' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: /Add Patient/i })).toBeVisible();
+      await expect(page.getByRole('button', { name: /Add Patient/i })).toBeVisible();
 
       // Cancel returns to doctor profile
       await page.getByRole('button', { name: 'Cancel' }).click();
       await expect(page).toHaveURL(/\/doctors\/doc-1$/);
+    });
+
+    test('Doctor selection modal opens from Add Patient form, filters doctors, paginates, and updates selected doctor', async ({ page }) => {
+      await page.goto('/doctors/doc-1');
+      await page.getByTestId('btn-assign-patient').click();
+      const addPatientDialog = page.getByRole('dialog', { name: /Add Patient/i });
+      await expect(addPatientDialog).toBeVisible();
+
+      // Verify initial doctor banner matches Dr. Sarah Jenkins
+      await expect(addPatientDialog.getByText('Dr. Sarah Jenkins').first()).toBeVisible();
+      const changeBtn = page.getByTestId('btn-change-doctor');
+      await expect(changeBtn).toBeVisible();
+
+      // Open Doctor Selection modal
+      await changeBtn.click();
+      const pickerModal = page.getByTestId('modal-doctor-picker');
+      await expect(pickerModal).toBeVisible();
+      await expect(pickerModal.getByRole('heading', { name: /Select Doctor/i })).toBeVisible();
+
+      // Verify search input filters doctors list
+      const searchInput = page.getByTestId('input-doctor-search');
+      await searchInput.fill('United');
+      await expect(pickerModal.getByText(/United Hospital/i).first()).toBeVisible();
+
+      // Clear search
+      await searchInput.fill('');
+
+      // Test pagination (5 per page)
+      const nextBtn = page.getByTestId('btn-doctor-picker-next');
+      if (await nextBtn.isEnabled()) {
+        await nextBtn.click();
+        await expect(pickerModal.getByText(/Showing 6 to/i)).toBeVisible();
+        const prevBtn = page.getByTestId('btn-doctor-picker-prev');
+        await prevBtn.click();
+        await expect(pickerModal.getByText(/Showing 1 to 5/i)).toBeVisible();
+      }
+
+      // Search for specific doctor: Michael Chen
+      await searchInput.fill('Michael Chen');
+      await expect(pickerModal.getByText('Dr. Michael Chen')).toBeVisible();
+
+      // Select Dr. Michael Chen
+      await page.getByTestId('btn-select-doctor-doc-2').click();
+
+      // Doctor picker modal should close
+      await expect(pickerModal).not.toBeVisible();
+
+      // Add patient modal remains open and banner now displays Dr. Michael Chen
+      await expect(addPatientDialog).toBeVisible();
+      await expect(addPatientDialog.getByText('Dr. Michael Chen').first()).toBeVisible();
     });
   });
 

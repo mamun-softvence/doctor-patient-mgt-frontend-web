@@ -19,16 +19,20 @@ export const doctorFormSchema = z.object({
 export type DoctorFormData = z.infer<typeof doctorFormSchema>;
 
 export const patientFormSchema = z.object({
-  name: z.string().trim().min(2, 'Patient name must be at least 2 characters'),
-  age: z.number().int().min(0, 'Age must be 0 or greater').max(130, 'Age must be realistic'),
+  name: z.string().trim().min(2, 'Patient name must be at least 2 characters').max(100),
+  age: z.number().int().min(0, 'Age must be 0 or greater').max(130, 'Age cannot exceed 130'),
   gender: z.enum(['male', 'female', 'other'], {
     message: 'Please select a gender',
   }),
   doctorId: z.string().min(1, 'Please select an assigned doctor'),
-  condition: z.string().trim().min(2, 'Medical condition is required'),
-  status: z.enum(['Active', 'Critical', 'Recovered']),
-  admitted: z.string().min(4, 'Admission date is required'),
-  phone: z.string().trim().optional(),
+  phone: z.string().trim().optional().or(z.literal('')),
+  email: z.string().trim().email('Please enter a valid email address').optional().or(z.literal('')),
+  condition: z.string().trim().min(1, 'Please select a condition'),
+  diagnosis: z.string().trim().max(200).optional().or(z.literal('')),
+  admissionDate: z.string().optional().or(z.literal('')),
+  notes: z.string().trim().max(2000).optional().or(z.literal('')),
+  status: z.enum(['Active', 'Critical', 'Recovered']).optional(),
+  admitted: z.string().optional(),
   address: z.string().trim().optional(),
   emergencyContact: z.string().trim().optional(),
 });

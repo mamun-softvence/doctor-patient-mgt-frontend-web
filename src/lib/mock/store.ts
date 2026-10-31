@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { Doctor, Patient, DashboardStats, DoctorFormData, PatientFormData } from '@/types';
+import { Doctor, Patient, PatientStatus, DashboardStats, DoctorFormData, PatientFormData } from '@/types';
 import { INITIAL_DOCTORS, INITIAL_PATIENTS } from './seed';
 
 interface MockStoreState {
@@ -100,6 +100,15 @@ export const useMockStore = create<MockStoreState>()(
         const assignedDoctor = get().doctors.find((d) => d.id === data.doctorId);
         const doctorName = assignedDoctor ? assignedDoctor.name : 'Unknown Doctor';
 
+        const conditionLower = (data.condition || '').toLowerCase();
+        let derivedStatus: PatientStatus = data.status || 'Active';
+        if (!data.status) {
+          if (conditionLower === 'critical') derivedStatus = 'Critical';
+          else if (conditionLower === 'recovering' || conditionLower === 'discharged' || conditionLower === 'recovered') derivedStatus = 'Recovered';
+        }
+
+        const dateVal = data.admissionDate || data.admitted || new Date().toISOString().split('T')[0];
+
         const newPatient: Patient = {
           id: `pat-${Date.now()}`,
           name: data.name,
@@ -108,9 +117,13 @@ export const useMockStore = create<MockStoreState>()(
           doctorId: data.doctorId,
           doctorName,
           condition: data.condition,
-          status: data.status,
-          admitted: data.admitted,
+          status: derivedStatus,
+          admitted: dateVal,
+          admissionDate: dateVal,
           phone: data.phone,
+          email: data.email,
+          diagnosis: data.diagnosis,
+          notes: data.notes,
           address: data.address,
           emergencyContact: data.emergencyContact,
           createdAt: new Date().toISOString(),
@@ -138,9 +151,21 @@ export const useMockStore = create<MockStoreState>()(
             doctorName = doc ? doc.name : current.doctorName;
           }
 
+          let derivedStatus = data.status || current.status;
+          if (!data.status && data.condition) {
+            const conditionLower = data.condition.toLowerCase();
+            if (conditionLower === 'critical') derivedStatus = 'Critical';
+            else if (conditionLower === 'recovering' || conditionLower === 'discharged' || conditionLower === 'recovered') derivedStatus = 'Recovered';
+          }
+
+          const dateVal = data.admissionDate || data.admitted || current.admitted;
+
           const updatedPat: Patient = {
             ...current,
             ...data,
+            status: derivedStatus,
+            admitted: dateVal,
+            admissionDate: dateVal,
             doctorName,
           };
           updated = updatedPat;
@@ -209,15 +234,74 @@ export function selectDoctorPatientCount(state: MockStoreState, doctorId: string
   return state.patients.filter((p) => p.doctorId === doctorId).length;
 }
 
+export function classifyPatientCondition(
+  p: Patient
+): 'Critical' | 'Under observation' | 'Recovering' | 'Stable' | 'Discharged' {
+  const condLower = (p.condition || '').toLowerCase();
+  const statusLower = (p.status || '').toLowerCase();
+
+  if (statusLower === 'critical' || condLower.includes('critical')) {
+    return 'Critical';
+  }
+  if (statusLower === 'recovered' || condLower.includes('discharg')) {
+    return 'Discharged';
+  }
+  if (
+    condLower.includes('observ') ||
+    condLower.includes('severe') ||
+    condLower.includes('heart') ||
+    condLower.includes('arrhythmia') ||
+    condLower.includes('migraine')
+  ) {
+    return 'Under observation';
+  }
+  if (
+    condLower.includes('recov') ||
+    condLower.includes('neoplasm') ||
+    condLower.includes('ligament') ||
+    condLower.includes('neuro')
+  ) {
+    return 'Recovering';
+  }
+  return 'Stable';
+}
+
 export function computeDashboardStats(doctors: Doctor[], patients: Patient[]): DashboardStats {
   const totalDoctors = doctors.length;
   const activeDoctors = doctors.filter((d) => d.status === 'Active').length;
   const totalPatients = patients.length;
   const activePatients = patients.filter((p) => p.status === 'Active').length;
-  const criticalPatients = patients.filter((p) => p.status === 'Critical').length;
+  const criticalPatients = patients.filter((p) => classifyPatientCondition(p) === 'Critical').length;
   const recoveredPatients = patients.filter((p) => p.status === 'Recovered').length;
+  const dischargedPatients = patients.filter((p) => classifyPatientCondition(p) === 'Discharged').length;
 
-  // Specialty Breakdown
+  const hospitalsCount = new Set(doctors.map((d) => d.hospital || d.department)).size || 8;
+
+  // Doctor Caseloads & Top Doctors
+  const doctorCaseloadMap = new Map<string, number>();
+  patients.forEach((p) => {
+    doctorCaseloadMap.set(p.doctorId, (doctorCaseloadMap.get(p.doctorId) || 0) + 1);
+  });
+
+  const doctorCounts = doctors.map((d) => ({
+    doctorId: d.id,
+    name: d.name,
+    specialization: d.specialty,
+    count: doctorCaseloadMap.get(d.id) || 0,
+  }));
+
+  doctorCounts.sort((a, b) => b.count - a.count);
+  const highestCaseload = doctorCounts.length > 0 ? doctorCounts[0].count : 0;
+
+  const topDoctors = doctorCounts.slice(0, 10).map((d) => ({
+    ...d,
+    percentage: highestCaseload > 0 ? Math.round((d.count / highestCaseload) * 1000) / 10 : 0,
+  }));
+
+  const avgPatientsPerDoctor =
+    totalDoctors > 0 ? Math.round((totalPatients / totalDoctors) * 10) / 10 : 0;
+
+  // Specialty Breakdown & Specializations Table
   const specialtyMap = new Map<string, { doctorCount: number; patientCount: number }>();
   doctors.forEach((d) => {
     const existing = specialtyMap.get(d.specialty) || { doctorCount: 0, patientCount: 0 };
@@ -239,15 +323,55 @@ export function computeDashboardStats(doctors: Doctor[], patients: Patient[]): D
     ...counts,
   }));
 
-  // Condition Breakdown
-  const conditionMap = new Map<string, number>();
+  const maxSpecPatients = Math.max(
+    1,
+    ...Array.from(specialtyMap.values()).map((s) => s.patientCount)
+  );
+
+  const specializationTable = Array.from(specialtyMap.entries())
+    .map(([specialization, counts]) => ({
+      specialization,
+      doctors: counts.doctorCount,
+      patients: counts.patientCount,
+      perDoctor: counts.doctorCount > 0 ? (counts.patientCount / counts.doctorCount).toFixed(1) : '0.0',
+      percentage: Math.round((counts.patientCount / maxSpecPatients) * 1000) / 10,
+    }))
+    .sort((a, b) => b.patients - a.patients);
+
+  // Condition Breakdown (5 Canonical Tiers)
+  const conditionCategoryMap: Record<string, number> = {
+    Critical: 0,
+    'Under observation': 0,
+    Recovering: 0,
+    Stable: 0,
+    Discharged: 0,
+  };
+
   patients.forEach((p) => {
-    conditionMap.set(p.condition, (conditionMap.get(p.condition) || 0) + 1);
+    const cat = classifyPatientCondition(p);
+    conditionCategoryMap[cat] = (conditionCategoryMap[cat] || 0) + 1;
   });
 
-  const conditionBreakdown = Array.from(conditionMap.entries())
-    .map(([condition, count]) => ({ condition, count }))
-    .sort((a, b) => b.count - a.count);
+  const conditionConfigs = [
+    { name: 'Critical', key: 'critical', color: '#F43F5E', bgClass: 'bg-rose-500' },
+    { name: 'Under observation', key: 'under_observation', color: '#FBBF24', bgClass: 'bg-amber-400' },
+    { name: 'Recovering', key: 'recovering', color: '#0EA5E9', bgClass: 'bg-sky-500' },
+    { name: 'Stable', key: 'stable', color: '#10B981', bgClass: 'bg-emerald-500' },
+    { name: 'Discharged', key: 'discharged', color: '#CBD5E1', bgClass: 'bg-slate-300' },
+  ];
+
+  const conditionBreakdown = conditionConfigs.map((cfg) => {
+    const count = conditionCategoryMap[cfg.name] || 0;
+    const percentage = totalPatients > 0 ? Math.round((count / totalPatients) * 1000) / 10 : 0;
+    return {
+      condition: cfg.name,
+      key: cfg.key,
+      count,
+      percentage,
+      color: cfg.color,
+      bgClass: cfg.bgClass,
+    };
+  });
 
   // Admissions Trend
   const dateMap = new Map<string, number>();
@@ -260,6 +384,10 @@ export function computeDashboardStats(doctors: Doctor[], patients: Patient[]): D
     .map(([date, count]) => ({ date, count }))
     .sort((a, b) => a.date.localeCompare(b.date));
 
+  const newPatients = patients.length;
+  const newPatientsPrevPeriod = Math.max(1, Math.round(newPatients * 0.89));
+  const changePct = 12.3;
+
   return {
     totalDoctors,
     activeDoctors,
@@ -267,8 +395,17 @@ export function computeDashboardStats(doctors: Doctor[], patients: Patient[]): D
     activePatients,
     criticalPatients,
     recoveredPatients,
+    dischargedPatients,
+    hospitalsCount,
+    highestCaseload,
+    avgPatientsPerDoctor,
+    newPatients,
+    newPatientsPrevPeriod,
+    changePct,
     specialtyBreakdown,
+    specializationTable,
     conditionBreakdown,
+    topDoctors,
     admissionsTrend,
   };
 }

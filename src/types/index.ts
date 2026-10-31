@@ -8,6 +8,7 @@ export interface Doctor {
   email: string;
   phone: string;
   status: DoctorStatus;
+  hospital?: string;
   patientCount?: number;
   createdAt?: string;
 }
@@ -25,7 +26,11 @@ export interface Patient {
   condition: string;
   status: PatientStatus;
   admitted: string; // YYYY-MM-DD or formatted date string
+  admissionDate?: string;
   phone?: string;
+  email?: string;
+  diagnosis?: string;
+  notes?: string;
   address?: string;
   emergencyContact?: string;
   createdAt?: string;
@@ -38,14 +43,39 @@ export interface DashboardStats {
   activePatients: number;
   criticalPatients: number;
   recoveredPatients: number;
+  dischargedPatients: number;
+  hospitalsCount: number;
+  highestCaseload: number;
+  avgPatientsPerDoctor: number;
+  newPatients: number;
+  newPatientsPrevPeriod: number;
+  changePct: number;
   specialtyBreakdown: Array<{
     specialty: string;
     doctorCount: number;
     patientCount: number;
   }>;
+  specializationTable: Array<{
+    specialization: string;
+    doctors: number;
+    patients: number;
+    perDoctor: string;
+    percentage: number;
+  }>;
   conditionBreakdown: Array<{
     condition: string;
+    key: string;
     count: number;
+    percentage: number;
+    color: string;
+    bgClass: string;
+  }>;
+  topDoctors: Array<{
+    doctorId: string;
+    name: string;
+    specialization: string;
+    count: number;
+    percentage: number;
   }>;
   admissionsTrend: Array<{
     date: string;

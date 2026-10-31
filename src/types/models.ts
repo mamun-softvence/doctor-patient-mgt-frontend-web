@@ -31,6 +31,17 @@ export type DoctorListParams = {
   limit?: number;
 };
 
+export type Hospital = {
+  id: string;
+  name: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type HospitalInput = {
+  name: string;
+};
+
 export type Patient = {
   id: string;
   name: string;

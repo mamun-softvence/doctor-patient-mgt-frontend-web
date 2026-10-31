@@ -1,15 +1,22 @@
 export type DoctorStatus = 'Active' | 'Inactive';
 
+export interface Hospital {
+  id: string;
+  name: string;
+  createdAt?: string;
+}
+
 export interface Doctor {
   id: string;
   name: string;
   specialty: string;
-  department: string;
+  hospital: string;
+  department?: string;
   email: string;
   phone: string;
   status: DoctorStatus;
-  hospital?: string;
   patientCount?: number;
+  patientsCount?: number;
   createdAt?: string;
 }
 
@@ -86,6 +93,7 @@ export interface DashboardStats {
 export interface DoctorFilterParams {
   search?: string;
   specialty?: string;
+  hospital?: string;
   department?: string;
   from?: string;
   to?: string;

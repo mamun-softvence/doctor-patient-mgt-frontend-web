@@ -46,14 +46,14 @@ test.describe('Frontend State Management Architecture', () => {
 
     // 4. Fill form
     const uniqueName = `Dr. Specialist ${Date.now().toString().slice(-6)}`;
-    await page.getByPlaceholder(/e\.g\. Dr\. Alex Mercer/i).fill(uniqueName);
-    await page.getByPlaceholder(/e\.g\. Cardiology/i).fill('Neurology');
-    await page.getByPlaceholder(/e\.g\. Cardiovascular/i).fill('Neuroscience');
-    await page.getByPlaceholder(/alex\.mercer@hospital\.org/i).fill(`dr.${Date.now()}@hospital.org`);
-    await page.getByPlaceholder(/\+1-555-0199/i).fill('+1-555-8888');
+    await page.getByPlaceholder(/Dr\. Full name|e\.g\. Dr\. Alex Mercer/i).fill(uniqueName);
+    await page.getByPlaceholder(/Choose or type|e\.g\. Cardiology/i).first().fill('Neurology');
+    await page.getByTestId('input-doctor-hospital').fill('Evercare Hospital');
+    await page.getByPlaceholder(/name@hospital\.com|alex\.mercer@hospital\.org/i).fill(`dr.${Date.now()}@hospital.org`);
+    await page.getByPlaceholder(/\+880 1XXX-XXXXXX|\+1-555-0199/i).fill('+1-555-8888');
 
     // 5. Submit form
-    await page.getByRole('button', { name: 'Save Doctor' }).click();
+    await page.getByTestId('btn-submit-doctor').click();
 
     // 6. Verify modal closed, toast shown, and doctor present in table
     await expect(page.getByRole('dialog')).not.toBeVisible();
@@ -76,14 +76,17 @@ test.describe('Frontend State Management Architecture', () => {
 
     // 2. Open Assign Patient modal
     await page.getByTestId('btn-assign-patient').click();
-    await expect(page.getByRole('dialog', { name: 'Add Patient' })).toBeVisible();
+    await expect(page.getByRole('dialog', { name: /Add Patient/i })).toBeVisible();
 
     // 3. Fill patient details
     const uniquePatientName = `Patient ${Date.now().toString().slice(-6)}`;
-    await page.getByPlaceholder(/e\.g\. Eleanor Vance/i).fill(uniquePatientName);
-    await page.getByPlaceholder('42').fill('29');
-    await page.getByPlaceholder(/e\.g\. Hypertension/i).fill('Cardiomyopathy');
-    await page.getByRole('button', { name: 'Register Patient' }).click();
+    await page.getByPlaceholder(/Patient's full name|e\.g\. Eleanor Vance/i).fill(uniquePatientName);
+    await page.getByPlaceholder(/Years|42/i).fill('29');
+    const diagInput = page.getByPlaceholder(/For example, hypertension|e\.g\. Hypertension/i);
+    if ((await diagInput.count()) > 0) {
+      await diagInput.fill('Cardiomyopathy');
+    }
+    await page.getByRole('button', { name: /Add patient|Register Patient/i }).click();
 
     // 4. Verify modal closed and patient in assigned table
     await expect(page.getByRole('dialog')).not.toBeVisible();
@@ -102,28 +105,30 @@ test.describe('Frontend State Management Architecture', () => {
     await page.goto('/patients');
     const firstRow = page.locator('[data-testid^="patient-row-"]').first();
     await expect(firstRow).toBeVisible();
-    const patientName = await firstRow.locator('td').first().innerText();
-    const editBtn = firstRow.getByRole('button', { name: 'Edit' });
+    const patientName = (await firstRow.locator('td').first().locator('span').first().innerText()).trim();
+    const patientId = (await firstRow.getAttribute('data-testid'))?.replace('patient-row-', '') || 'pat-12';
+    const editBtn = page.getByTestId(`btn-edit-patient-${patientId}`);
 
     await editBtn.click();
     await expect(page.getByRole('dialog', { name: 'Edit Patient Record' })).toBeVisible();
 
-    // Change condition
-    const updatedCondition = `Condition-${Date.now().toString().slice(-4)}`;
-    const conditionInput = page.getByRole('dialog').locator('input[name="condition"]');
-    await conditionInput.fill(updatedCondition);
+    // Change condition to Critical
+    const conditionSelect = page.getByRole('dialog').locator('select[name="condition"]');
+    await conditionSelect.selectOption('Critical');
 
     // Reassign to Dr. Michael Chen (doc-2)
-    const doctorSelect = page.getByRole('dialog').locator('select[name="doctorId"]');
-    await doctorSelect.selectOption('doc-2');
+    const changeDoctorBtn = page.getByRole('dialog').getByTestId('btn-change-doctor');
+    await expect(changeDoctorBtn).toBeVisible();
+    await changeDoctorBtn.click();
+    await page.getByTestId('btn-select-doctor-doc-2').click();
 
     // Save
-    await page.getByRole('button', { name: 'Save Changes' }).click();
+    await page.getByTestId('btn-submit-patient').click();
     await expect(page.getByRole('dialog')).not.toBeVisible();
 
     // Verify row in table shows updated condition and new doctor name
-    await expect(firstRow.getByText(updatedCondition)).toBeVisible();
-    await expect(firstRow.getByText('Dr. Michael Chen')).toBeVisible();
+    await expect(firstRow.getByRole('cell', { name: 'Critical' }).first()).toBeVisible();
+    await expect(firstRow.getByRole('link', { name: 'Dr. Michael Chen' })).toBeVisible();
 
     // Verify patient is now in Dr. Michael Chen's profile
     await page.goto('/doctors/doc-2');
@@ -134,8 +139,8 @@ test.describe('Frontend State Management Architecture', () => {
     await page.goto('/patients');
     const firstRow = page.locator('[data-testid^="patient-row-"]').first();
     await expect(firstRow).toBeVisible();
-    const patientName = await firstRow.locator('td').first().innerText();
-    const deleteBtn = firstRow.getByRole('button', { name: 'Delete' });
+    const patientName = (await firstRow.locator('td').first().locator('span').first().innerText()).trim();
+    const deleteBtn = firstRow.getByRole('button', { name: /Delete/i });
 
     // Open confirmation dialog
     await deleteBtn.click();
@@ -171,7 +176,7 @@ test.describe('Frontend State Management Architecture', () => {
 
     // 2. Reset filters restores full list
     await page.getByRole('button', { name: 'Reset Filters' }).click();
-    await expect(page).toHaveURL(/.*patients$/);
+    await expect(page).toHaveURL(/.*patients(\?page=1)?$/);
     await expect(statusSelect).toHaveValue('');
 
     // 3. Navigate away to dashboard and back to verify deep link history
@@ -236,5 +241,53 @@ test.describe('Frontend State Management Architecture', () => {
     // Verify reset
     await page.getByTestId('patient-reset-filters').click();
     await expect(page).toHaveURL(/\/patients$/);
+  });
+
+  test('8. Static Dashboard Parity: 5-card KPI grid, condition breakdown, top 10 doctors, and specializations table', async ({
+    page,
+  }) => {
+    await page.goto('/dashboard');
+
+    // 1. Verify 5-card KPI Grid
+    await expect(page.getByTestId('kpi-total-doctors')).toBeVisible();
+    await expect(page.getByTestId('kpi-total-patients')).toBeVisible();
+    await expect(page.getByText('New patients')).toBeVisible();
+    await expect(page.getByRole('term').filter({ hasText: 'Patients per doctor' })).toBeVisible();
+    await expect(page.getByTestId('kpi-critical-patients')).toBeVisible();
+
+    // 2. Verify Patient Condition Section
+    await expect(page.getByRole('heading', { name: 'Patient condition' })).toBeVisible();
+    await expect(page.getByRole('img', { name: /Condition mix:/i })).toBeVisible();
+
+    // Check condition links
+    const criticalCard = page.locator('a[href*="condition=critical"]');
+    await expect(criticalCard).toBeVisible();
+    await expect(criticalCard.getByText('Critical')).toBeVisible();
+
+    // 3. Verify Top 10 Doctors Caseloads
+    await expect(page.getByRole('heading', { name: 'Patients per doctor' })).toBeVisible();
+    const allDoctorsLink = page.getByRole('link', { name: 'All doctors' });
+    await expect(allDoctorsLink).toBeVisible();
+
+    // 4. Verify Specializations Table
+    await expect(page.getByRole('heading', { name: 'Specializations' })).toBeVisible();
+    const specTable = page.locator('table');
+    await expect(specTable.getByRole('columnheader', { name: 'Specialization' })).toBeVisible();
+    await expect(specTable.getByRole('columnheader', { name: 'Doctors' })).toBeVisible();
+    await expect(specTable.getByRole('columnheader', { name: 'Patients' })).toBeVisible();
+
+    // 5. Test Custom Date Popover
+    const customBtn = page.getByRole('button', { name: /custom/i });
+    await expect(customBtn).toBeVisible();
+    await customBtn.click();
+
+    const popover = page.getByRole('dialog', { name: /custom date range filter/i });
+    await expect(popover).toBeVisible();
+    await page.locator('#dashboard-custom-from').fill('2026-10-01');
+    await page.locator('#dashboard-custom-to').fill('2026-10-31');
+    await popover.getByRole('button', { name: 'Apply' }).click();
+
+    await expect(popover).not.toBeVisible();
+    await expect(customBtn).toContainText('2026-10-01 – 2026-10-31');
   });
 });

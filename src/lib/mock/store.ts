@@ -1,13 +1,15 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { Doctor, Patient, PatientStatus, DashboardStats, DoctorFormData, PatientFormData } from '@/types';
-import { INITIAL_DOCTORS, INITIAL_PATIENTS } from './seed';
+import { Doctor, Patient, Hospital, PatientStatus, DashboardStats, DoctorFormData, PatientFormData } from '@/types';
+import { INITIAL_DOCTORS, INITIAL_PATIENTS, INITIAL_HOSPITALS } from './seed';
 
 interface MockStoreState {
   doctors: Doctor[];
   patients: Patient[];
+  hospitals: Hospital[];
 
   // Actions
+  addHospital: (name: string) => Hospital;
   addDoctor: (data: DoctorFormData) => Doctor;
   updateDoctor: (id: string, data: Partial<DoctorFormData>) => Doctor | null;
   addPatient: (data: PatientFormData) => Patient;
@@ -49,17 +51,38 @@ export const useMockStore = create<MockStoreState>()(
     (set, get) => ({
       doctors: INITIAL_DOCTORS,
       patients: INITIAL_PATIENTS,
+      hospitals: INITIAL_HOSPITALS,
+
+      addHospital: (name: string) => {
+        const trimmed = name.trim();
+        const existing = get().hospitals.find((h) => h.name.toLowerCase() === trimmed.toLowerCase());
+        if (existing) return existing;
+        const newHospital: Hospital = {
+          id: `hosp-${Date.now()}`,
+          name: trimmed,
+          createdAt: new Date().toISOString(),
+        };
+        set((state) => ({ hospitals: [...state.hospitals, newHospital] }));
+        return newHospital;
+      },
 
       addDoctor: (data: DoctorFormData) => {
         const newId = `doc-${Date.now()}`;
+        const hospitalName = data.hospital || data.department || 'Square Hospital';
+        const existingHosp = get().hospitals.find((h) => h.name.toLowerCase() === hospitalName.toLowerCase());
+        if (!existingHosp) {
+          get().addHospital(hospitalName);
+        }
         const newDoctor: Doctor = {
           id: newId,
           name: data.name,
           specialty: data.specialty,
-          department: data.department,
+          hospital: hospitalName,
+          department: data.department || hospitalName,
           email: data.email,
           phone: data.phone,
-          status: data.status,
+          status: data.status || 'Active',
+          patientsCount: 0,
           createdAt: new Date().toISOString(),
         };
 
@@ -219,6 +242,7 @@ export const useMockStore = create<MockStoreState>()(
         set({
           doctors: INITIAL_DOCTORS,
           patients: INITIAL_PATIENTS,
+          hospitals: INITIAL_HOSPITALS,
         });
       },
     }),

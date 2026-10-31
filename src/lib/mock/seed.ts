@@ -1,4 +1,17 @@
-import { Doctor, Patient } from '@/types';
+import { Doctor, Patient, Hospital } from '@/types';
+
+export const INITIAL_HOSPITALS: Hospital[] = [
+  { id: 'hosp-1', name: 'Square Hospital' },
+  { id: 'hosp-2', name: 'Evercare Hospital Dhaka' },
+  { id: 'hosp-3', name: 'United Hospital' },
+  { id: 'hosp-4', name: 'Labaid Specialized Hospital' },
+  { id: 'hosp-5', name: 'Ibn Sina Hospital' },
+  { id: 'hosp-6', name: 'Dhaka Medical College Hospital' },
+  { id: 'hosp-7', name: 'BIRDEM General Hospital' },
+  { id: 'hosp-8', name: 'Popular Medical College Hospital' },
+  { id: 'hosp-9', name: 'National Heart Foundation' },
+  { id: 'hosp-10', name: 'Apollo Hospital' },
+];
 
 export const INITIAL_DOCTORS: Doctor[] = [
   { id: 'doc-1', name: 'Dr. Sarah Jenkins', specialty: 'Cardiology', department: 'Cardiovascular', hospital: 'Square Hospital', email: 'sarah.jenkins@hospital.org', phone: '+1-555-0101', status: 'Active' },

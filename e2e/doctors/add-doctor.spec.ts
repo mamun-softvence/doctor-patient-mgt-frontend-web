@@ -31,19 +31,19 @@ test.describe('Add Doctor Workflow (Visible Chromium Suite)', () => {
     await expect(dialog).toBeVisible();
 
     // Submit empty form to trigger Zod client validation
-    await page.getByRole('button', { name: 'Save Doctor' }).click();
+    await page.getByTestId('btn-submit-doctor').click();
 
     // Verify all field-level validation messages appear
     await expect(page.getByText('Doctor name must be at least 2 characters')).toBeVisible();
     await expect(page.getByText('Specialty is required')).toBeVisible();
-    await expect(page.getByText('Department is required')).toBeVisible();
+    await expect(page.getByText(/Hospital is required/i)).toBeVisible();
     await expect(page.getByText('Please enter a valid email address')).toBeVisible();
     await expect(page.getByText('Valid phone number is required')).toBeVisible();
 
     // Test invalid email format error
-    const emailInput = page.getByPlaceholder('alex.mercer@hospital.org');
+    const emailInput = page.getByPlaceholder(/name@hospital\.com|alex\.mercer@hospital\.org/i);
     await emailInput.fill('not-an-email');
-    await page.getByRole('button', { name: 'Save Doctor' }).click();
+    await page.getByTestId('btn-submit-doctor').click();
     await expect(page.getByText('Please enter a valid email address')).toBeVisible();
 
     // Verify dialog remains open
@@ -66,8 +66,8 @@ test.describe('Add Doctor Workflow (Visible Chromium Suite)', () => {
 
     // Partially fill form fields
     const testGhostName = `Dr. Ghost ${Date.now()}`;
-    await page.getByPlaceholder(/e\.g\. Dr\. Alex Mercer/i).fill(testGhostName);
-    await page.getByPlaceholder(/e\.g\. Cardiology/i).fill('Radiology');
+    await page.getByPlaceholder(/Dr\. Full name|e\.g\. Dr\. Alex Mercer/i).fill(testGhostName);
+    await page.getByPlaceholder(/Choose or type|e\.g\. Cardiology/i).first().fill('Radiology');
 
     // Dismiss using the Cancel button
     await page.getByRole('button', { name: 'Cancel' }).click();
@@ -105,17 +105,17 @@ test.describe('Add Doctor Workflow (Visible Chromium Suite)', () => {
     const doctorName = `Dr. Evelyn Reed ${uniqueSuffix}`;
     const doctorEmail = `dr.reed.${uniqueSuffix}@hospital.org`;
     const doctorSpecialty = 'Cardiology';
-    const doctorDepartment = 'Heart & Vascular Institute';
+    const doctorHospital = 'Evercare Hospital Dhaka';
     const doctorPhone = '+1-555-0144';
 
-    await page.getByPlaceholder(/e\.g\. Dr\. Alex Mercer/i).fill(doctorName);
-    await page.getByPlaceholder(/e\.g\. Cardiology/i).fill(doctorSpecialty);
-    await page.getByPlaceholder(/e\.g\. Cardiovascular/i).fill(doctorDepartment);
-    await page.getByPlaceholder(/alex\.mercer@hospital\.org/i).fill(doctorEmail);
-    await page.getByPlaceholder(/\+1-555-0199/i).fill(doctorPhone);
+    await page.getByPlaceholder(/Dr\. Full name|e\.g\. Dr\. Alex Mercer/i).fill(doctorName);
+    await page.getByPlaceholder(/Choose or type|e\.g\. Cardiology/i).first().fill(doctorSpecialty);
+    await page.getByTestId('input-doctor-hospital').fill(doctorHospital);
+    await page.getByPlaceholder(/name@hospital\.com|alex\.mercer@hospital\.org/i).fill(doctorEmail);
+    await page.getByPlaceholder(/\+880 1XXX-XXXXXX|\+1-555-0199/i).fill(doctorPhone);
 
     // Step 5: Submit form
-    await page.getByRole('button', { name: 'Save Doctor' }).click();
+    await page.getByTestId('btn-submit-doctor').click();
 
     // Step 6: Verify modal closes & toast notification confirms creation
     await expect(dialog).not.toBeVisible();
@@ -147,17 +147,17 @@ test.describe('Add Doctor Workflow (Visible Chromium Suite)', () => {
     const doctorName = `Dr. Marcus Brody ${uniqueSuffix}`;
     const doctorEmail = `dr.brody.${uniqueSuffix}@hospital.org`;
     const doctorSpecialty = 'Neurology';
-    const doctorDepartment = 'Brain Health Center';
+    const doctorHospital = 'United Hospital';
     const doctorPhone = '+1-555-0188';
 
-    await page.getByPlaceholder(/e\.g\. Dr\. Alex Mercer/i).fill(doctorName);
-    await page.getByPlaceholder(/e\.g\. Cardiology/i).fill(doctorSpecialty);
-    await page.getByPlaceholder(/e\.g\. Cardiovascular/i).fill(doctorDepartment);
-    await page.getByPlaceholder(/alex\.mercer@hospital\.org/i).fill(doctorEmail);
-    await page.getByPlaceholder(/\+1-555-0199/i).fill(doctorPhone);
+    await page.getByPlaceholder(/Dr\. Full name|e\.g\. Dr\. Alex Mercer/i).fill(doctorName);
+    await page.getByPlaceholder(/Choose or type|e\.g\. Cardiology/i).first().fill(doctorSpecialty);
+    await page.getByTestId('input-doctor-hospital').fill(doctorHospital);
+    await page.getByPlaceholder(/name@hospital\.com|alex\.mercer@hospital\.org/i).fill(doctorEmail);
+    await page.getByPlaceholder(/\+880 1XXX-XXXXXX|\+1-555-0199/i).fill(doctorPhone);
 
     // Step 3: Submit doctor form
-    await page.getByRole('button', { name: 'Save Doctor' }).click();
+    await page.getByTestId('btn-submit-doctor').click();
 
     // Step 4: Standalone page redirects back to /doctors
     await page.waitForURL('**/doctors');
@@ -168,5 +168,31 @@ test.describe('Add Doctor Workflow (Visible Chromium Suite)', () => {
     const doctorRow = tableBody.locator('tr', { hasText: doctorName });
     await expect(doctorRow).toBeVisible();
     await expect(doctorRow).toContainText(doctorSpecialty);
+  });
+
+  test('5. Hospital combobox supports dynamic search and inline "+ Add new hospital"', async ({ page }) => {
+    await page.goto('/doctors/new');
+    const hospitalInput = page.getByTestId('input-doctor-hospital');
+    await expect(hospitalInput).toBeVisible();
+
+    // Type query to filter
+    await hospitalInput.fill('Square');
+    const listbox = page.getByTestId('hospital-combobox-list');
+    await expect(listbox).toBeVisible();
+    await expect(listbox.getByText('Square Hospital')).toBeVisible();
+
+    // Type a brand new hospital name
+    const newHospitalName = `St. Hope Hospital ${Date.now().toString().slice(-4)}`;
+    await hospitalInput.fill(newHospitalName);
+    const addNewOption = page.getByTestId('hospital-option-add-new');
+    await expect(addNewOption).toBeVisible();
+    await expect(addNewOption).toContainText(newHospitalName);
+
+    // Click "+ Add"
+    await addNewOption.click();
+
+    // Combobox closes and input has the new hospital name
+    await expect(listbox).not.toBeVisible();
+    await expect(hospitalInput).toHaveValue(newHospitalName);
   });
 });

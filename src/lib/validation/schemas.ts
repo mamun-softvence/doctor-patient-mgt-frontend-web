@@ -10,7 +10,8 @@ export type LoginFormData = z.infer<typeof loginSchema>;
 export const doctorFormSchema = z.object({
   name: z.string().trim().min(2, 'Doctor name must be at least 2 characters'),
   specialty: z.string().trim().min(2, 'Specialty is required'),
-  department: z.string().trim().min(2, 'Department is required'),
+  hospital: z.string().trim().min(2, 'Hospital is required'),
+  department: z.string().trim().optional(),
   email: z.string().trim().email('Please enter a valid email address'),
   phone: z.string().trim().min(5, 'Valid phone number is required'),
   status: z.enum(['Active', 'Inactive']),

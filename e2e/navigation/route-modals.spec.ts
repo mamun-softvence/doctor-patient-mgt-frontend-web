@@ -150,15 +150,17 @@ test.describe('Next.js Parallel & Intercepting Route Modals (Rule 8)', () => {
   test.describe('Workflow 3: Edit Patient (/patients/[patientId]/edit)', () => {
     test('Soft navigation from patient table opens edit modal over roster', async ({ page }) => {
       await page.goto('/patients');
-      await expect(page.getByTestId('patient-row-pat-1')).toBeVisible();
+      const firstRow = page.locator('[data-testid^="patient-row-"]').first();
+      await expect(firstRow).toBeVisible();
+      const patientId = (await firstRow.getAttribute('data-testid'))?.replace('patient-row-', '') || 'pat-12';
 
-      // Click Edit link for pat-1
-      await page.getByTestId('btn-edit-patient-pat-1').click();
+      // Click Edit link for this patient
+      await page.getByTestId(`btn-edit-patient-${patientId}`).click();
       await expect(page.getByRole('dialog', { name: 'Edit Patient Record' })).toBeVisible();
-      await expect(page).toHaveURL(/\/patients\/pat-1\/edit$/);
+      await expect(page).toHaveURL(new RegExp(`/patients/${patientId}/edit$`));
 
       // Background roster remains visible
-      await expect(page.getByTestId('patient-row-pat-1')).toBeVisible();
+      await expect(page.getByTestId(`patient-row-${patientId}`)).toBeVisible();
 
       // Back navigation closes modal
       await page.goBack();

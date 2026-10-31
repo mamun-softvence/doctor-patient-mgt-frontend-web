@@ -44,5 +44,9 @@ export const keys = {
     all: ['audit'] as const,
     list: (params: AuditListParams) => ['audit', 'list', params] as const,
   },
+  hospitals: {
+    all: ['hospitals'] as const,
+    list: (q?: string) => ['hospitals', 'list', q] as const,
+  },
 };
 
